@@ -1,0 +1,35 @@
+{
+  "name": "quantmaster-mcp-server",
+  "version": "1.0.0",
+  "description": "Dr. QuantMaster - AI-Powered Quantitative Research MCP Server",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "seed": "npx tsx scripts/seed-db.ts",
+    "test:tools": "npx tsx scripts/test-tools.ts"
+  },
+  "keywords": [
+    "mcp",
+    "quantitative-research",
+    "statistics",
+    "econometrics",
+    "chromadb",
+    "claude-desktop"
+  ],
+  "author": "Sean Shin",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "chromadb": "^1.10.0",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output (keeping dist for MCP distribution)
+# dist/
+
+# Environment
+.env
+
+# ChromaDB data
+chroma-data/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local config
+claude_desktop_config.json
