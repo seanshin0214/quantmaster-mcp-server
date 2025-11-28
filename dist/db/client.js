@@ -1,35 +1,61 @@
-import { ChromaClient, DefaultEmbeddingFunction } from "chromadb";
+import { DefaultEmbeddingFunction } from "chromadb";
 import { COLLECTIONS } from "./collections.js";
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 let chromaClient = null;
-const embeddingFunction = new DefaultEmbeddingFunction();
+let embeddingFunction = null;
+let isChromaAvailable = false;
 export async function initializeDatabase() {
-    const chromaPath = process.env.CHROMA_PATH || "./chroma-data";
-    chromaClient = new ChromaClient({
-        path: chromaPath,
-    });
-    // Ensure all collections exist
-    for (const collectionConfig of Object.values(COLLECTIONS)) {
-        try {
-            await chromaClient.getOrCreateCollection({
-                name: collectionConfig.name,
-                metadata: collectionConfig.metadata,
-                embeddingFunction: embeddingFunction,
-            });
+    // 내장 모드: 로컬 파일 경로 사용 (HTTP 서버 불필요)
+    const chromaDataPath = process.env.CHROMA_DATA_PATH ||
+        path.resolve(__dirname, "../../chroma-data");
+    try {
+        embeddingFunction = new DefaultEmbeddingFunction();
+        // PersistentClient 모드 - 별도 서버 없이 내장 실행
+        const { ChromaClient: PersistentChromaClient } = await import("chromadb");
+        // ChromaDB 1.x에서는 path 옵션으로 내장 모드 사용
+        chromaClient = new PersistentChromaClient({
+            path: chromaDataPath,
+        });
+        // Ensure all collections exist
+        for (const collectionConfig of Object.values(COLLECTIONS)) {
+            try {
+                await chromaClient.getOrCreateCollection({
+                    name: collectionConfig.name,
+                    metadata: collectionConfig.metadata,
+                    embeddingFunction: embeddingFunction,
+                });
+            }
+            catch (error) {
+                // Collection creation failed, but continue
+            }
         }
-        catch (error) {
-            console.error(`Failed to create collection ${collectionConfig.name}:`, error);
-        }
+        isChromaAvailable = true;
+        console.error(`ChromaDB initialized (embedded mode): ${chromaDataPath}`);
     }
-    console.error("ChromaDB initialized successfully");
+    catch (error) {
+        console.error("ChromaDB initialization failed - running without vector search");
+        console.error("Error:", error instanceof Error ? error.message : error);
+        isChromaAvailable = false;
+    }
+}
+export function isVectorSearchAvailable() {
+    return isChromaAvailable;
 }
 export function getChromaClient() {
-    if (!chromaClient) {
-        throw new Error("ChromaDB client not initialized. Call initializeDatabase() first.");
-    }
     return chromaClient;
 }
 export async function getCollection(name) {
-    const client = getChromaClient();
-    return await client.getCollection({ name, embeddingFunction });
+    if (!chromaClient || !embeddingFunction || !isChromaAvailable) {
+        return null;
+    }
+    try {
+        return await chromaClient.getCollection({ name, embeddingFunction });
+    }
+    catch {
+        return null;
+    }
 }
 //# sourceMappingURL=client.js.map

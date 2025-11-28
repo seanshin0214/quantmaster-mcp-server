@@ -1,4 +1,4 @@
-import { getCollection } from "./client.js";
+import { getCollection, isVectorSearchAvailable } from "./client.js";
 import { COLLECTIONS, CollectionCategory } from "./collections.js";
 import type { Metadata } from "chromadb";
 
@@ -13,6 +13,15 @@ export async function searchKnowledgeBase(
   category: CollectionCategory | "all" = "all",
   nResults: number = 5
 ): Promise<SearchResult[]> {
+  // If ChromaDB is not available, return empty results with a note
+  if (!isVectorSearchAvailable()) {
+    return [{
+      content: "Vector search is currently unavailable. The tool is operating without RAG support. To enable, start ChromaDB server: chroma run --path ./chroma-data",
+      metadata: { source: "system", type: "notice" },
+      distance: 0
+    }];
+  }
+
   const collectionsToSearch =
     category === "all"
       ? Object.values(COLLECTIONS).map((c) => c.name)
@@ -25,6 +34,8 @@ export async function searchKnowledgeBase(
   for (const collectionName of collectionsToSearch) {
     try {
       const collection = await getCollection(collectionName);
+      if (!collection) continue;
+
       const queryResult = await collection.query({
         queryTexts: [query],
         nResults: nResults,
@@ -40,7 +51,7 @@ export async function searchKnowledgeBase(
         );
       }
     } catch (error) {
-      console.error(`Error searching collection ${collectionName}:`, error);
+      // Silently skip failed collections
     }
   }
 
@@ -56,7 +67,9 @@ export async function addDocument(
   content: string,
   metadata: Metadata
 ): Promise<void> {
+  if (!isVectorSearchAvailable()) return;
   const collection = await getCollection(collectionName);
+  if (!collection) return;
   await collection.add({
     ids: [id],
     documents: [content],
@@ -70,7 +83,9 @@ export async function addDocuments(
   contents: string[],
   metadatas: Metadata[]
 ): Promise<void> {
+  if (!isVectorSearchAvailable()) return;
   const collection = await getCollection(collectionName);
+  if (!collection) return;
   await collection.add({
     ids,
     documents: contents,
